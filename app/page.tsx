@@ -30,7 +30,7 @@ export default function Home() {
 
   async function fetchPlatillos() {
     try {
-      const res = await fetch("http://localhost:5000/api/chatbot/platillos");
+      const res = await fetch("https://arquitecturaorientadaaservicios.onrender.com/api/chatbot/platillos");
       const data: Platillo[] = await res.json();
       setPlatillos(data);
     } catch (err) {
@@ -40,7 +40,7 @@ export default function Home() {
 
   async function fetchMenus() {
     try {
-      const res = await fetch("http://localhost:5000/api/chatbot/menu");
+      const res = await fetch("https://arquitecturaorientadaaservicios.onrender.com/api/chatbot/menu");
       const data: Menu[] = await res.json();
       setMenus(data);
     } catch (err) {
@@ -56,7 +56,7 @@ export default function Home() {
     if (!file) return;
     const fd = new FormData();
     fd.append("file", file);
-    await fetch("http://localhost:5000/api/chatbot/upload-csv", {
+    await fetch("https://arquitecturaorientadaaservicios.onrender.com/api/chatbot/upload-csv", {
       method: "POST",
       body: fd,
     });
@@ -76,8 +76,8 @@ export default function Home() {
     e.preventDefault();
     const isEdit = !!form.id;
     const endpoint = isEdit
-      ? `http://localhost:5000/api/chatbot/platillo/${form.id}`
-      : "http://localhost:5000/api/chatbot/platillo";
+      ? `https://arquitecturaorientadaaservicios.onrender.com/api/chatbot/platillo/${form.id}`
+      : "https://arquitecturaorientadaaservicios.onrender.com/api/chatbot/platillo";
     const method = isEdit ? "PUT" : "POST";
 
     await fetch(endpoint, {
@@ -93,7 +93,7 @@ export default function Home() {
   async function handleDelete(id: number) {
     if (!confirm("¿Estás seguro de eliminar este platillo?")) return;
 
-    await fetch(`http://localhost:5000/api/chatbot/platillo/${id}`, {
+    await fetch(`https://arquitecturaorientadaaservicios.onrender.com/api/chatbot/platillo/${id}`, {
       method: "DELETE",
     });
 
