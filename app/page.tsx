@@ -1,103 +1,251 @@
-import Image from "next/image";
+"use client";
+import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
+
+type Menu = {
+  id: number;
+  nombre: string;
+};
+
+type Platillo = {
+  id: number;
+  platillo: string;
+  precio: number;
+  menuId: number;
+  menu?: {
+    id: number;
+    nombre: string;
+  };
+};
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [platillos, setPlatillos] = useState<Platillo[]>([]);
+  const [menus, setMenus] = useState<Menu[]>([]);
+  const [file, setFile] = useState<File | null>(null);
+  const [form, setForm] = useState<Partial<Platillo>>({});
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+  useEffect(() => {
+    fetchPlatillos();
+    fetchMenus();
+  }, []);
+
+  async function fetchPlatillos() {
+    try {
+      const res = await fetch("http://localhost:5000/api/chatbot/platillos");
+      const data: Platillo[] = await res.json();
+      setPlatillos(data);
+    } catch (err) {
+      console.error("Error al cargar platillos", err);
+    }
+  }
+
+  async function fetchMenus() {
+    try {
+      const res = await fetch("http://localhost:5000/api/chatbot/menu");
+      const data: Menu[] = await res.json();
+      setMenus(data);
+    } catch (err) {
+      console.error("Error al cargar menús", err);
+    }
+  }
+
+  function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
+    setFile(e.target.files?.[0] ?? null);
+  }
+
+  async function uploadCSV() {
+    if (!file) return;
+    const fd = new FormData();
+    fd.append("file", file);
+    await fetch("http://localhost:5000/api/chatbot/upload-csv", {
+      method: "POST",
+      body: fd,
+    });
+    setFile(null);
+    fetchPlatillos();
+  }
+
+  function handleFormChange(e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
+    const { name, value } = e.target;
+    setForm({
+      ...form,
+      [name]: name === "precio" || name === "menuId" ? Number(value) : value,
+    });
+  }
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    const isEdit = !!form.id;
+    const endpoint = isEdit
+      ? `http://localhost:5000/api/chatbot/platillo/${form.id}`
+      : "http://localhost:5000/api/chatbot/platillo";
+    const method = isEdit ? "PUT" : "POST";
+
+    await fetch(endpoint, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+
+    setForm({});
+    fetchPlatillos();
+  }
+
+  async function handleDelete(id: number) {
+    if (!confirm("¿Estás seguro de eliminar este platillo?")) return;
+
+    await fetch(`http://localhost:5000/api/chatbot/platillo/${id}`, {
+      method: "DELETE",
+    });
+
+    fetchPlatillos();
+  }
+
+  function handleEdit(platillo: Platillo) {
+    setForm({
+      id: platillo.id,
+      platillo: platillo.platillo,
+      precio: platillo.precio,
+      menuId: platillo.menuId,
+    });
+  }
+
+  return (
+    <main className="min-h-screen bg-cyan-500 text-gray-800 px-4 sm:px-6 py-12">
+      <div className="max-w-4xl mx-auto space-y-12">
+        <h1 className="text-4xl font-bold text-center text-white">🍽️ CRUD de Platillos</h1>
+
+        {/* CSV Upload */}
+        <section className="bg-white rounded shadow p-6">
+          <h2 className="text-xl font-semibold text-blue-700 mb-4">📤 Subir CSV</h2>
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleFileChange}
+              className="file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+            <button
+              onClick={uploadCSV}
+              disabled={!file}
+              className={`px-4 py-2 rounded font-semibold transition-colors ${
+                file
+                  ? "bg-blue-600 text-white hover:bg-blue-700"
+                  : "bg-gray-300 text-gray-600 cursor-not-allowed"
+              }`}
+            >
+              Subir
+            </button>
+          </div>
+        </section>
+
+        {/* Formulario */}
+        <section className="bg-white rounded shadow p-6">
+          <h2 className="text-xl font-semibold text-blue-700 mb-4">
+            {form.id ? "✏️ Editar Platillo" : "➕ Crear Platillo"}
+          </h2>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <input
+              name="platillo"
+              value={form.platillo ?? ""}
+              onChange={handleFormChange}
+              placeholder="Nombre del platillo"
+              required
+              className="w-full border border-gray-300 rounded px-4 py-2"
+            />
+            <input
+              name="precio"
+              type="number"
+              value={form.precio ?? ""}
+              onChange={handleFormChange}
+              placeholder="Precio"
+              required
+              className="w-full border border-gray-300 rounded px-4 py-2"
+            />
+            <select
+              name="menuId"
+              value={form.menuId ?? ""}
+              onChange={handleFormChange}
+              required
+              className="w-full border border-gray-300 rounded px-4 py-2"
+            >
+              <option value="" disabled>Selecciona un menú</option>
+              {menus.map((menu) => (
+                <option key={menu.id} value={menu.id}>
+                  {menu.nombre}
+                </option>
+              ))}
+            </select>
+            <div className="flex gap-4">
+              <button type="submit" className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded">
+                {form.id ? "Actualizar" : "Crear"}
+              </button>
+              {form.id && (
+                <button
+                  type="button"
+                  onClick={() => setForm({})}
+                  className="bg-gray-400 hover:bg-gray-500 text-white px-6 py-2 rounded"
+                >
+                  Cancelar
+                </button>
+              )}
+            </div>
+          </form>
+        </section>
+
+        {/* Tabla */}
+        <section className="bg-white rounded shadow p-6">
+          <h2 className="text-xl font-semibold text-blue-700 mb-4">📋 Platillos Registrados</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full border border-gray-300 text-sm">
+              <thead className="bg-blue-100 text-blue-800">
+                <tr>
+                  <th className="px-4 py-2 border">ID</th>
+                  <th className="px-4 py-2 border">Platillo</th>
+                  <th className="px-4 py-2 border">Precio</th>
+                  <th className="px-4 py-2 border">Menú</th>
+                  <th className="px-4 py-2 border">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {platillos.length > 0 ? (
+                  platillos.map((p) => (
+                    <tr key={p.id} className="text-center">
+                      <td className="border px-4 py-2">{p.id}</td>
+                      <td className="border px-4 py-2">{p.platillo}</td>
+                      <td className="border px-4 py-2">${p.precio}</td>
+                      <td className="border px-4 py-2">{p.menu?.nombre ?? "Desconocido"}</td>
+                      <td className="border px-4 py-2">
+                        <div className="flex gap-2 justify-center">
+                          <button
+                            onClick={() => handleEdit(p)}
+                            className="text-blue-600 hover:text-blue-800"
+                            aria-label="Editar"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={() => handleDelete(p.id)}
+                            className="text-red-600 hover:text-red-800"
+                            aria-label="Eliminar"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="text-center py-4 text-gray-500">
+                      No hay platillos registrados.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
   );
 }
